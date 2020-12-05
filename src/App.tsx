@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { ThemeProvider, Image, Stack, Spinner, Button, Input, Tabs, TabList, TabPanel, TabPanels, Tab, Text } from '@chakra-ui/core';
-import Ipfs from 'ipfs'
+import { ChakraProvider, Stack, Spinner, Button, Input, Tabs, TabList, TabPanel, TabPanels, Tab, Text, Heading } from '@chakra-ui/react';
+import Ipfs from 'ipfs-core'
 import orbitdb from 'orbit-db'
 import PeerID from 'peer-id'
 import EventStore from 'orbit-db-eventstore';
@@ -12,58 +12,11 @@ import PictureBox from './components/pictureBox'
 import FileUploader from './components/fileUpload'
 import './App.css';
 import Gallery from './components/gallery';
-
+import GlobalContext, { initialState } from './context/globalContext'
+import reducer from './reducers/globalReducer'
 //@ts-ignore
 window.LOG = 'orbit*'
 
-interface IContextProps {
-  state: globalState;
-  dispatch: ({ type }: { type: any }) => void;
-}
-
-type globalState = {
-  ipfs: any,
-  username: string,
-  password: string,
-  keyPair?: any,
-  orbit?: EventStore<any>,
-  location: {
-    lat: string,
-    lon: string
-  }
-}
-
-const initialState = {
-  ipfs: null,
-  username: '',
-  password: '',
-  location: {
-    lat: '',
-    lon: ''
-  }
-}
-
-export const GlobalContext = React.createContext({} as IContextProps)
-
-const reducer = (state: globalState, action: any): globalState => {
-  if (action.type !== 'LOGIN') console.log(state)
-  if (action.type !== 'LOGIN') console.log(action)
-  switch (action.type) {
-    case 'START_IPFS': {
-      return { ...state, ipfs: action.payload.ipfs }
-    }
-    case 'LOGIN':
-      return { ...state, username: action.payload.username, password: action.payload.password, keyPair: action.payload.keyPair }
-    case 'SET_KEYPAIR':
-      return { ...state, keyPair: action.payload.keyPair, username: '', password: '' }
-    case 'START_ORBIT':
-      return { ...state, orbit: action.payload.orbit }
-    case 'SET_LOCATION':
-      return { ...state, location: action.payload.location }
-    default:
-      return state;
-  }
-}
 
 
 function App() {
@@ -72,12 +25,12 @@ function App() {
   const [loaded, setLoaded] = React.useState(false)
   const [loadingMessage, setMessage] = React.useState('')
 
-  const startUp = async (state: globalState, dispatch: any) => {
+  const startUp = async () => {
     setLoading(true)
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
         dispatch({ type: 'SET_LOCATION', payload: { location: { lat: position.coords.latitude, lon: position.coords.longitude } } })
-      }, dispatch({ type: 'SET_LOCATION', payload: { location: { lat: '0', lon: '0' } } }))
+      })
     }
     try {
        setMessage('Deriving Keys')
@@ -91,7 +44,7 @@ function App() {
       //@ts-ignore
       let ipfs = await Ipfs.create(
         {
-          PeerId: peer,
+          libp2p: { PeerId: peer},
           relay: { enabled: true, hop: { enabled: true, active: true } },
           repo: "ipfs-inside-joke",
           config: {
@@ -100,9 +53,11 @@ function App() {
                 "/dns4/wrtc-star2.sjc.dwebops.pub/tcp/443/wss/p2p-webrtc-star/",
               ]
             },
+          pubsub: {}
       
           }
         })
+      
       ipfs.libp2p.on("peer:connect", (connection: any) => console.log(`connected to ${connection.remotePeer.toB58String()}`))
       console.log('IPFS Started')
       setMessage('Connecting to Orbit-DB')
@@ -112,7 +67,8 @@ function App() {
       console.log('address is', dbAddr)
       let events: EventStore<any>
       if (dbAddr) {
-        events = (await orbit.open(dbAddr)) as EventStore<any>;
+        //@ts-ignore
+        events = (await orbit.open(dbAddr )) as EventStore<any>;
         console.log('found Db!', events)
       }
       else
@@ -142,7 +98,7 @@ function App() {
     const handleLogin = () => {
       //@ts-ignore
       dispatch({ type: 'LOGIN', payload: { username: username, password: password } })
-      startUp(state, dispatch);
+      startUp();
     }
     return (
       <Stack align="center" >
@@ -153,15 +109,15 @@ function App() {
     )
   }
 
-  const value = { state, dispatch }
   return (
-    <ThemeProvider>
-      <GlobalContext.Provider value={value}>
+    <ChakraProvider>
+      <GlobalContext.Provider value={{ dispatch, state }}>
         <Stack align="center" w="100%">
+        <Heading>Inside Joke</Heading>
           <Stack align="center">
           </Stack>
           {(!state.keyPair && state.username === '') && <Login />}
-          {loading && <Stack align="center" color="white">
+          {loading && <Stack align="center" >
             <Spinner />
             <Text>{loadingMessage}</Text>
             </Stack>}
@@ -192,7 +148,7 @@ function App() {
           </Tabs>}
         </Stack>
       </GlobalContext.Provider>
-    </ThemeProvider>
+    </ChakraProvider>
   )
 }
 

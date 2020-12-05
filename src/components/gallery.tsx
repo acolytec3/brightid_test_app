@@ -1,8 +1,8 @@
 import React from 'react'
 import { Button, Stack, Box, Image, Text, useDisclosure, 
-    Modal, ModalBody, ModalContent, ModalOverlay, ModalCloseButton, ModalHeader, SimpleGrid, Flex } from '@chakra-ui/core';
+    Modal, ModalBody, ModalContent, ModalOverlay, ModalCloseButton, ModalHeader, SimpleGrid, Flex } from '@chakra-ui/react';
 import { Map, Marker, Popup, TileLayer } from "react-leaflet";
-import { GlobalContext } from '../App'
+import GlobalContext from '../context/globalContext'
 import { LatLngTuple } from 'leaflet'
 
 const Gallery = () => {
@@ -34,7 +34,7 @@ const Gallery = () => {
                 onClose={() => setActive(null)}>
                 <Stack key={activeMarker.clock.toString()} isInline>
                     <Image key={activeMarker.hash}
-                        size="100px"
+                        width="100px"
                         objectFit="cover"
                         src={`https://gateway.ipfs.io/ipfs/${activeMarker.payload.value.hash}`}
                         alt="Unknown"
@@ -52,7 +52,7 @@ const Gallery = () => {
             {media.map((picture) => {
                 return <Stack isInline key={picture.clock.toString()} spacing={1}>
                     <Image key={picture.hash}
-                        size="100px"
+                        width="100px"
                         objectFit="cover"
                         src={`https://gateway.ipfs.io/ipfs/${picture.payload.value.hash}`}
                         alt="Unknown"
@@ -65,7 +65,7 @@ const Gallery = () => {
     return (
         <Box>
             <Flex align="center" direction="column" >
-                <Stack isInline><Button w="200px" onClick={handleClick}>View Posted Media</Button>
+                <Stack isInline><Button mw="50vw" onClick={handleClick}>View Posted Media</Button>
                 <Button w="200px" onClick={onOpen}>Open Map</Button></Stack>
                 {gallery && <PictureWall />}
                 <Modal isOpen={isOpen} onClose={onClose} isCentered size="100%">

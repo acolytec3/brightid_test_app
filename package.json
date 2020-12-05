@@ -4,9 +4,9 @@
   "private": true,
   "homepage": "./",
   "dependencies": {
-    "@chakra-ui/core": "^0.8.0",
-    "@emotion/core": "^10.0.35",
-    "@emotion/styled": "^10.0.27",
+    "@chakra-ui/react": "^1.0.2",
+    "@emotion/react": "^11.1.1",
+    "@emotion/styled": "^11.0.0",
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
@@ -16,9 +16,10 @@
     "@types/react": "^16.9.50",
     "@types/react-dom": "^16.9.8",
     "@types/react-html5-camera-photo": "^1.5.0",
-    "emotion-theming": "^10.0.27",
+    "framer-motion": "^2.9.5",
     "human-crypto-keys": "^0.1.4",
     "ipfs": "^0.52.2",
+    "ipfs-core": "^0.3.0",
     "js-ipfs": "0.0.301",
     "leaflet": "^1.7.1",
     "libp2p-crypto": "^0.18.0",
@@ -30,7 +31,7 @@
     "react-leaflet": "^2.7.0",
     "react-scripts": "3.4.3",
     "styled-components": "^5.2.0",
-    "typescript": "^3.7.5"
+    "typescript": "^4.1.2"
   },
   "scripts": {
     "start": "react-scripts start",

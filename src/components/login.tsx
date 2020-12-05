@@ -1,6 +1,6 @@
 import React from 'react'
-import { Button, Stack, Input} from '@chakra-ui/core';
-import { GlobalContext } from '../App'
+import { Button, Stack, Input} from '@chakra-ui/react';
+import GlobalContext from '../context/globalContext'
 
 
 const Login = (startup: any) => {

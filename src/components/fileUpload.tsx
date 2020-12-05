@@ -1,6 +1,6 @@
 import React, { ChangeEvent } from 'react'
-import { Button, Stack, Box, useToast, Input } from '@chakra-ui/core';
-import { GlobalContext } from '../App'
+import { Button, Stack, Box, useToast, Input } from '@chakra-ui/react';
+import GlobalContext from '../context/globalContext'
 
 const FileUploader = () => {
     const state = React.useContext(GlobalContext)

@@ -2,10 +2,10 @@ import React from 'react';
 import {
     Text, Image,
     Button, Stack, useToast, Modal, ModalOverlay, ModalContent, ModalBody, useDisclosure, 
-} from '@chakra-ui/core';
+} from '@chakra-ui/react';
 import Camera, { FACING_MODES } from 'react-html5-camera-photo';
 import 'react-html5-camera-photo/build/css/index.css';
-import { GlobalContext } from '../App'
+import GlobalContext from '../context/globalContext'
 
 const PictureBox = () => {
     const state = React.useContext(GlobalContext)
