@@ -1,153 +1,131 @@
-
+import { Box, Button, ChakraProvider, Code, Flex, Heading, HStack, Input, Link, Skeleton, Text, Textarea, VStack } from '@chakra-ui/react';
+import { generateDeeplink, putTestingBlock, removeTestingBlock, sponsor, verifyContextId, availableSponsorships } from 'brightid_sdk';
+import QRCode from 'qrcode.react';
 import React from 'react';
-import { ChakraProvider, Stack, Spinner, Button, Input, Tabs, TabList, TabPanel, TabPanels, Tab, Text, Heading } from '@chakra-ui/react';
-import Ipfs from 'ipfs-core'
-import orbitdb from 'orbit-db'
-import PeerID from 'peer-id'
-import EventStore from 'orbit-db-eventstore';
-import crypto from 'libp2p-crypto'
-//@ts-ignore
-import { getKeyPairFromSeed } from 'human-crypto-keys'
-import PictureBox from './components/pictureBox'
-import FileUploader from './components/fileUpload'
-import './App.css';
-import Gallery from './components/gallery';
-import GlobalContext, { initialState } from './context/globalContext'
-import reducer from './reducers/globalReducer'
-//@ts-ignore
-window.LOG = 'orbit*'
-
-
+import { v4 } from 'uuid';
 
 function App() {
-  const [state, dispatch] = React.useReducer(reducer, initialState)
-  const [loading, setLoading] = React.useState(false)
-  const [loaded, setLoaded] = React.useState(false)
-  const [loadingMessage, setMessage] = React.useState('')
+  const [verified, setVerified] = React.useState<any>()
+  const [privateKey, setPrivateKey] = React.useState<string>()
+  const [testingKey, setTestingKey] = React.useState<string>()
+  const [context, setContext] = React.useState<string>()
+  const [contextId, setContextId] = React.useState<string>()
+  const [deeplink, setDeeplink] = React.useState<string>()
+  const [sponsorships, setSponsorships] = React.useState<number>(0)
+  const [res, setRes] = React.useState<string>()
 
-  const startUp = async () => {
-    setLoading(true)
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        dispatch({ type: 'SET_LOCATION', payload: { location: { lat: position.coords.latitude, lon: position.coords.longitude } } })
+  const generateContextId = () => {
+    setContextId(v4())
+  }
+
+  const verify = async () => {
+    let res = await verifyContextId(context!, contextId!)
+    setVerified(res)
+    setRes(JSON.stringify(res, null, 2))
+    console.log(res)
+  }
+
+  const trySponsor = async () => {
+    let res = await sponsor(privateKey!, context!, contextId!)
+    setRes(JSON.stringify(res, null, 2))
+    console.log(res)
+  }
+
+  const testBlocks = async (op: string) => {
+    let res = await putTestingBlock(op, testingKey!, context!, contextId!)
+    setRes(JSON.stringify(res, null, 2))
+    console.log(res)
+
+  }
+
+  const deleteTestBlocks = async (op: string) => {
+    let res = await removeTestingBlock(op, testingKey!, context!, contextId!)
+    setRes(JSON.stringify(res, null, 2))
+    console.log(res)
+  }
+
+  React.useEffect(() => {
+    if (context && contextId) {
+      setDeeplink(generateDeeplink(context, contextId))
+    }
+    else setDeeplink('')
+  }, [context, contextId])
+
+  React.useEffect(() => {
+    if (context) {
+      availableSponsorships(context).then((res: number | any) => {
+        if (typeof res === 'number') 
+          setSponsorships(res)
       })
     }
-    try {
-       setMessage('Deriving Keys')
-      let salt = "ihatemakinguplongpasswords"
-      let buffer = new TextEncoder().encode(state.username + state.password + salt)
-      let keyPair = await getKeyPairFromSeed(buffer, 'rsa', { privateKeyFormat: 'raw-pem', publicKeyFormat: 'raw-pem' });
-      dispatch({ type: 'SET_KEYPAIR', payload: { keyPair: keyPair } })
-      setMessage('Connecting to IPFS')
-      let privateKey = await crypto.keys.import(keyPair.privateKey, '');
-      let peer = await PeerID.createFromPrivKey(crypto.keys.marshalPrivateKey(privateKey, "rsa"))
-      //@ts-ignore
-      let ipfs = await Ipfs.create(
-        {
-          libp2p: { PeerId: peer},
-          relay: { enabled: true, hop: { enabled: true, active: true } },
-          repo: "ipfs-inside-joke",
-          config: {
-            Addresses: {
-              Swarm: ["/dns4/wrtc-star1.par.dwebops.pub/tcp/443/wss/p2p-webrtc-star/",
-                "/dns4/wrtc-star2.sjc.dwebops.pub/tcp/443/wss/p2p-webrtc-star/",
-              ]
-            },
-          pubsub: {}
-      
-          }
-        })
-      
-      ipfs.libp2p.on("peer:connect", (connection: any) => console.log(`connected to ${connection.remotePeer.toB58String()}`))
-      console.log('IPFS Started')
-      setMessage('Connecting to Orbit-DB')
-      let orbit = await orbitdb.createInstance(ipfs)
-      //@ts-ignore
-      let dbAddr = await orbit.determineAddress('monkey-knuckles', 'eventlog', { accessController: { write: ['*'] } })
-      console.log('address is', dbAddr)
-      let events: EventStore<any>
-      if (dbAddr) {
-        //@ts-ignore
-        events = (await orbit.open(dbAddr )) as EventStore<any>;
-        console.log('found Db!', events)
-      }
-      else
-        events = await orbit.eventlog<any>('monkey-knuckles',{})
-      await events.load()
-      events.events.on('replicate', (addr) => console.log('Replicating DB to ', addr))
-      events.events.on('peer', (peer) => console.log('Found a peer with our DB', peer))
-      events.events.on('replicate.progress', (msg) => console.log(msg))
-      events.events.on('replicated', (msg) => console.log('Replicating DB from', msg))
-      console.log('Orbit DB initiated')
-      dispatch({ type: 'START_IPFS', payload: { ipfs: ipfs } })
-      dispatch({ type: 'START_ORBIT', payload: { orbit: events } })
-      setLoading(false)
-      setLoaded(true)
-      setTimeout(() => {ipfs.swarm.connect('/ip4/172.31.1.4/tcp/4003/ws/p2p/QmaSDYtcdw1fuK4DGVSF2zK1QxNTUwM9GVM458AG9SFekE'); console.log('dialing')},3000)
-    } catch (error) {
-      console.error('IPFS init error:', error)
-      setLoading(false) 
-    }
-
-  }
-
-  const Login = () => {
-    const [username, setName] = React.useState('')
-    const [password, setPassword] = React.useState('')
-
-    const handleLogin = () => {
-      //@ts-ignore
-      dispatch({ type: 'LOGIN', payload: { username: username, password: password } })
-      startUp();
-    }
-    return (
-      <Stack align="center" >
-        <Input w="200px" isRequired placeholder="Username" value={username} onChange={(evt: any) => setName(evt.target.value)} />
-        <Input w="200px" isRequired placeholder="Password" type="password" value={password} onChange={(evt: any) => setPassword(evt.target.value)} />
-        <Button w="150px" onClick={handleLogin}>Login</Button>
-      </Stack>
-    )
-  }
-
+  }, [context])
   return (
     <ChakraProvider>
-      <GlobalContext.Provider value={{ dispatch, state }}>
-        <Stack align="center" w="100%">
-        <Heading>Inside Joke</Heading>
-          <Stack align="center">
-          </Stack>
-          {(!state.keyPair && state.username === '') && <Login />}
-          {loading && <Stack align="center" >
-            <Spinner />
-            <Text>{loadingMessage}</Text>
-            </Stack>}
-
-          {loaded && <Tabs isFitted align="center" size="lg">
-            <TabPanels>
-              <TabPanel>
-                <PictureBox />
-              </TabPanel>
-              <TabPanel>
-                <FileUploader />
-              </TabPanel>
-              <TabPanel>
-                <Gallery />
-              </TabPanel>
-            </TabPanels>
-            <TabList position="fixed" bottom="0px" left="0px" w="100vw">
-              <Tab>
-                Camera
-              </Tab>
-              <Tab>
-                Media
-              </Tab>
-              <Tab>
-                Gallery
-              </Tab>
-            </TabList>
-          </Tabs>}
-        </Stack>
-      </GlobalContext.Provider>
+      <VStack align="center" w="100%" px="10%">
+        <Heading>BrightID Test App</Heading>
+        <Box borderWidth="1px" borderColor="grey.300" p="5px" minWidth="200px">
+          <Heading size="sm">Application Context</Heading>
+          <HStack><VStack>
+            <Input my="5px" placeholder="Context" value={context} onChange={(evt) => setContext(evt.target.value)} />
+            <Input placeholder="ContextId" value={contextId} onChange={(evt) => setContextId(evt.target.value)} />
+            <Button onClick={generateContextId}>Generate ContextId</Button>
+          </VStack>
+            <VStack>
+              <Heading size="xs">Linking QR Code</Heading>
+              <Skeleton isLoaded={deeplink !== ''}>
+                <QRCode value={deeplink ? deeplink : ''} />
+              </Skeleton>
+              <Skeleton isLoaded={deeplink !== ''}>
+                <Link color="blue.700" w="128px" overflow="ellipsis" href={deeplink}>Clickable link</Link>
+              </Skeleton>
+            </VStack>
+          </HStack>
+        </Box>
+        <Box borderWidth="1px" borderColor="grey.300" p="5px" minWidth="200px" >
+          <Heading size="sm">ContextID Status</Heading>
+          <Flex direction="row">
+            <VStack align="start">
+              <HStack mb="5px">
+              <Button w="200px" onClick={verify} isDisabled={!context || !contextId}>Check status</Button>
+              <Text w="250px">Status verified: {verified && verified.hasOwnProperty('unique') ? verified.unique.toString() : 'unknown '}</Text>
+            </HStack>
+            <HStack>
+              <Button w="200px" onClick={trySponsor} isDisabled={!privateKey || !context || !contextId}>Sponsor</Button>
+              <Text w="250px">Available sponsorships: {sponsorships}</Text>
+            </HStack>
+            </VStack>
+            <Box>
+              <Heading size="xs">Node Response</Heading>
+            <Code>
+              <Textarea height="200px" fontSize={10} value={res} isReadOnly={true} />
+            </Code>
+            </Box>
+            </Flex>
+        </Box>
+        <Box borderWidth="1px" borderColor="grey.300" p="5px">
+          <Heading size="sm">Application Keys</Heading>
+          <Input my="5px" placeholder="Sponsor Private Key" value={privateKey} onChange={(evt) => setPrivateKey(evt.target.value)} />
+          <Input placeholder="Testing Key" value={testingKey} onChange={(evt) => setTestingKey(evt.target.value)} />
+        </Box>
+        <Box borderWidth="1px" borderColor="grey.300" p="5px" minWidth="200px">
+          <Heading size="sm">Set Test Blocks</Heading>
+          <Text>Use these buttons to temporarily remove a context ID's status (verified/sponsored/linked) for a given context</Text>
+          <HStack spacing={4}>
+            <Button onClick={() => testBlocks('verification')} isDisabled={!testingKey || !context || !contextId}>Unverify</Button>
+            <Button onClick={() => testBlocks('sponsorship')} isDisabled={!testingKey || !context || !contextId}>Unsponsor</Button>
+            <Button onClick={() => testBlocks('link')} isDisabled={!testingKey || !context || !contextId} >Unlink</Button>
+          </HStack>
+        </Box>
+        <Box borderWidth="1px" borderColor="grey.300" p="5px" minWidth="200px">
+          <Heading size="sm">Remove Test Blocks</Heading>
+          <Text>Use these buttons to remove test blocks previously set for a context ID's status (verified/sponsored/linked) for a given context</Text>
+          <HStack spacing={4}>
+            <Button onClick={() => deleteTestBlocks('verification')} isDisabled={!testingKey || !context || !contextId}>Delete Unverify</Button>
+            <Button onClick={() => deleteTestBlocks('sponsorship')} isDisabled={!testingKey || !context || !contextId}>Delete Unsponsor</Button>
+            <Button onClick={() => deleteTestBlocks('link')} isDisabled={!testingKey || !context || !contextId}>Delete Unlink</Button>
+          </HStack>
+        </Box>
+      </VStack>
     </ChakraProvider>
   )
 }
