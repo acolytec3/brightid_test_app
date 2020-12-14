@@ -20,7 +20,7 @@
     "@types/uuid": "^8.3.0",
     "axios": "^0.21.0",
     "base64-js": "^1.5.1",
-    "brightid_sdk": "file:../brightIdSDK",
+    "brightid_sdk": "^1.0.0",
     "fast-json-stable-stringify": "^2.1.0",
     "framer-motion": "^2.9.5",
     "peer-id": "^0.14.2",
