@@ -1,4 +1,5 @@
 # BrightID Test App
+**> [Use the hosted app here](https://acolytec3.github.io/brightid_test_app/)**
 
 This is a demo app that allows anyone integrating with [BrightID](https://brightid.org) to test their out their application context as well as demo all the features of the BrightID [Javascript/Typescript SDK](https://www.npmjs.com/package/brightid_sdk).
 
